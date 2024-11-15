@@ -7,7 +7,7 @@ import type { Matcher, MatcherOptions as DTLMatcherOptions } from '@testing-libr
 declare global {
   namespace Cypress {
     interface Chainable {
-      // TODO: Uncomment when authorization is enabled
+      // TODO: [Auth-enablement] Uncomment once auth is enabled
       // /**
       //  * Visits the URL and performs a login if necessary.
       //  * Uses credentials supplied by environment variables if not provided.
@@ -121,7 +121,7 @@ declare global {
   }
 }
 
-// TODO: Uncomment when authorization is enabled
+// TODO: [Auth-enablement] Uncomment once auth is enabled
 // Cypress.Commands.add('visitWithLogin', (url, user = TEST_USER) => {
 //   if (Cypress.env('MOCK')) {
 //     cy.visit(url);
@@ -171,7 +171,7 @@ Cypress.Commands.add(
         if ($el.attr('aria-expanded') === 'false') {
           cy.wrap($el).click();
         }
-        return cy.wrap($el.parent()).findByRole('menuitem', { name });
+        return cy.get('body').findByRole('menuitem', { name });
       });
   },
 );
@@ -182,7 +182,7 @@ Cypress.Commands.add('findDropdownItem', { prevSubject: 'element' }, (subject, n
     if ($el.attr('aria-expanded') === 'false') {
       cy.wrap($el).click();
     }
-    return cy.wrap($el).parent().findByRole('menuitem', { name });
+    return cy.get('body').findByRole('menuitem', { name });
   });
 });
 

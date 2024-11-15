@@ -19,10 +19,11 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 import { BarsIcon } from '@patternfly/react-icons';
+import ToastNotifications from '~/shared/components/ToastNotifications';
+import { useSettings } from '~/shared/hooks/useSettings';
 import NavSidebar from './NavSidebar';
 import AppRoutes from './AppRoutes';
 import { AppContext } from './AppContext';
-import { useSettings } from './useSettings';
 import { ModelRegistrySelectorContextProvider } from './context/ModelRegistrySelectorContext';
 
 const App: React.FC = () => {
@@ -61,7 +62,7 @@ const App: React.FC = () => {
               <Button
                 variant="secondary"
                 onClick={() => {
-                  // TODO: logout
+                  // TODO: [Auth-enablement] Logout when auth is enabled
                 }}
               >
                 Logout
@@ -93,7 +94,9 @@ const App: React.FC = () => {
         </MastheadBrand>
       </MastheadMain>
 
-      <MastheadContent>{/* TODO: Change this into a component for Header Tools */}</MastheadContent>
+      <MastheadContent>
+        {/* TODO: [Auth-enablement] Add logout and user status once we enable itNavigates to register page from table toolbar */}
+      </MastheadContent>
     </Masthead>
   );
 
@@ -112,6 +115,7 @@ const App: React.FC = () => {
         <ModelRegistrySelectorContextProvider>
           <AppRoutes />
         </ModelRegistrySelectorContextProvider>
+        <ToastNotifications />
       </Page>
     </AppContext.Provider>
   );
