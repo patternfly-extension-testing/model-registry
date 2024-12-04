@@ -6,6 +6,10 @@ GO ?= "$(shell which go)"
 BFF_PATH := $(PROJECT_PATH)/clients/ui/bff
 UI_PATH := $(PROJECT_PATH)/clients/ui/frontend
 
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.29
+ENVTEST ?= $(PROJECT_BIN)/setup-envtest
+
 # add tools bin directory
 PATH := $(PROJECT_BIN):$(PATH)
 
@@ -133,6 +137,9 @@ bin/protoc-gen-go:
 bin/protoc-gen-go-grpc:
 	GOBIN=$(PROJECT_BIN) ${GO} install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
 
+bin/envtest:
+	GOBIN=$(PROJECT_BIN) ${GO} install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240320141353-395cfc7486e6
+
 GOLANGCI_LINT ?= ${PROJECT_BIN}/golangci-lint
 bin/golangci-lint:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_BIN) v1.61.0
@@ -164,7 +171,7 @@ clean/deps:
 	rm -Rf bin/*
 
 .PHONY: deps
-deps: bin/protoc bin/go-enum bin/protoc-gen-go bin/protoc-gen-go-grpc bin/golangci-lint bin/goverter bin/openapi-generator-cli
+deps: bin/protoc bin/go-enum bin/protoc-gen-go bin/protoc-gen-go-grpc bin/golangci-lint bin/goverter bin/openapi-generator-cli bin/envtest
 
 .PHONY: vendor
 vendor:
@@ -196,20 +203,20 @@ gen: deps gen/grpc gen/openapi gen/openapi-server gen/converter
 
 .PHONY: lint
 lint:
-	${GOLANGCI_LINT} run main.go
-	${GOLANGCI_LINT} run cmd/... internal/... ./pkg/...
+	${GOLANGCI_LINT} run main.go  --timeout 3m
+	${GOLANGCI_LINT} run cmd/... internal/... ./pkg/...  --timeout 3m
 
 .PHONY: test
-test: gen
-	${GO} test ./internal/... ./pkg/...
+test: gen bin/envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" ${GO} test ./internal/... ./pkg/...
 
 .PHONY: test-nocache
-test-nocache: gen
-	${GO} test ./internal/... ./pkg/... -count=1
+test-nocache: gen bin/envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" ${GO} test ./internal/... ./pkg/... -count=1
 
 .PHONY: test-cover
-test-cover: gen
-	${GO} test ./internal/... ./pkg/... -coverprofile=coverage.txt
+test-cover: gen bin/envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" ${GO} test ./internal/... ./pkg/... -coverprofile=coverage.txt
 	${GO} tool cover -html=coverage.txt -o coverage.html
 
 .PHONY: run/proxy
@@ -249,12 +256,12 @@ ifeq ($(DOCKER),docker)
 	# docker uses builder containers
 	- $(DOCKER) buildx rm model-registry-builder
 	$(DOCKER) buildx create --use --name model-registry-builder --platform=$(PLATFORMS)
-	$(DOCKER) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f ${DOCKERFILE} .
+	$(DOCKER) buildx build --push --platform=$(PLATFORMS) --tag ${IMG}:$(IMG_VERSION) -f ${DOCKERFILE} .
 	$(DOCKER) buildx rm model-registry-builder
 else ifeq ($(DOCKER),podman)
 	# podman uses image manifests
 	$(DOCKER) manifest create -a ${IMG}
-	$(DOCKER) buildx build --platform=$(PLATFORMS) --manifest ${IMG} -f ${DOCKERFILE} .
+	$(DOCKER) buildx build --platform=$(PLATFORMS) --manifest ${IMG}:$(IMG_VERSION) -f ${DOCKERFILE} .
 	$(DOCKER) manifest push ${IMG}
 	$(DOCKER) manifest rm ${IMG}
 else
